@@ -1,0 +1,41 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Building 1", "href": "/building-data/1" },
+      "geometry": { "coordinates": [-111.84209536790628, 33.30682025786933], "type": "Point" },
+      "id": 0
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Building 2", "href": "/building-data/2" },
+      "geometry": { "coordinates": [-0.12742062981527624, 51.51304223486093], "type": "Point" },
+      "id": 1
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Building 3", "href": "/building-data/3" },
+      "geometry": { "coordinates": [-74.36368513620063, 40.184421046639585], "type": "Point" },
+      "id": 2
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Building 4", "href": "/building-data/4" },
+      "geometry": { "coordinates": [-82.68644444394347, 40.534510991478726], "type": "Point" },
+      "id": 3
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Building 5", "href": "/building-data/5" },
+      "geometry": { "coordinates": [-100.09725236012149, 43.523202555021825], "type": "Point" },
+      "id": 4
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Building 6", "href": "/building-data/6" },
+      "geometry": { "coordinates": [103.80449526418874, 1.3520748240272695], "type": "Point" },
+      "id": 5
+    }
+  ]
+}
