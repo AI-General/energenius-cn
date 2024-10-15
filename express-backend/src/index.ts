@@ -11,8 +11,10 @@ const path = require("path");
 const crypto = require("crypto");
 const mongoose = require("mongoose");
 const multer = require("multer");
-const { GridFsStorage } = require("multer-gridfs-storage");
-const Grid = require("gridfs-stream");
+const multerS3 = require("multer-s3");
+const aws = require("aws-sdk");
+// const { GridFsStorage } = require("multer-gridfs-storage");
+// const Grid = require("gridfs-stream");
 const methodOverride = require("method-override");
 
 const mongoURI = process.env.MONGODB_URI;
@@ -39,50 +41,82 @@ AppDataSource.initialize()
 
     const conn = mongoose.createConnection(mongoURI);
 
-    let gfs: any, gridfsBucket: any;
-    conn.once("open", () => {
-      gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
-        bucketName: "files",
-      });
+    // let gfs: any, gridfsBucket: any;
+    // conn.once("open", () => {
+    //   gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
+    //     bucketName: "files",
+    //   });
 
-      gfs = Grid(conn.db, mongoose.mongo);
-      gfs.collection("files");
+    //   gfs = Grid(conn.db, mongoose.mongo);
+    //   gfs.collection("files");
+    // });
+
+    aws.config.update({
+      accessKeyId: process.env.AWS_ACCESS_KEY,
+      secretAccessKey: process.env.AWS_ACCESS_SECRET,
+      region: process.env.REGION_NAME,
+    });
+    const s3 = new aws.S3();
+
+    // Create storage engine - mongodb
+    // const storage = new GridFsStorage({
+    //   url: mongoURI,
+    //   file: (req: Request, file) => {
+    //     const { userId, locationName } = req.params;
+    //     return new Promise((resolve, reject) => {
+    //       crypto.randomBytes(16, (err, buf) => {
+    //         if (err) {
+    //           return reject(err);
+    //         }
+    //         if (file.mimetype.split("/")[0] === "image") {
+    //           const filename = `${userId}/${locationName}/floormap.png`;
+    //           const fileInfo = {
+    //             filename: filename,
+    //             bucketName: "files",
+    //             metadata: { userId, locationName },
+    //           };
+    //           resolve(fileInfo);
+    //         } else {
+    //           const filename = `${userId}/${locationName}/dataFile.csv`;
+    //           const fileInfo = {
+    //             filename: filename,
+    //             bucketName: "files",
+    //             metadata: { userId, locationName },
+    //           };
+    //           resolve(fileInfo);
+    //         }
+    //       });
+    //     });
+    //   },
+    // });
+    // const upload = multer({ storage });
+
+    const BUCKET_NAME = process.env.AWS_BUCKET_NAME;
+
+    const upload = multer({
+      storage: multerS3({
+        s3: s3,
+        bucket: BUCKET_NAME,
+        contentType: multerS3.AUTO_CONTENT_TYPE, // Automatically set content type
+        key: (req: Request, file: any, cb: any) => {
+          console.log("request", req.params);
+          console.log("Uploading file:", file.originalname);
+          if (file.mimetype.split("/")[0] === "image") {
+            const userEmail = req.params.userEmail;
+            const locationName = req.params.locationName;
+            const filePath = `${userEmail}/${locationName}/floormap.png`;
+            cb(null, filePath);
+          } else {
+            const userEmail = req.params.userEmail;
+            const locationName = req.params.locationName;
+            const filePath = `${userEmail}/${locationName}/dataFile.csv`;
+            cb(null, filePath);
+          }
+        },
+      }),
     });
 
-    // Create storage engine
-    const storage = new GridFsStorage({
-      url: mongoURI,
-      file: (req: Request, file) => {
-        const { userId, locationName } = req.params;
-        return new Promise((resolve, reject) => {
-          crypto.randomBytes(16, (err, buf) => {
-            if (err) {
-              return reject(err);
-            }
-            if (file.mimetype.split("/")[0] === "image") {
-              const filename = `${userId}/${locationName}/floormap.png`;
-              const fileInfo = {
-                filename: filename,
-                bucketName: "files",
-                metadata: { userId, locationName },
-              };
-              resolve(fileInfo);
-            } else {
-              const filename = `${userId}/${locationName}/dataFile.csv`;
-              const fileInfo = {
-                filename: filename,
-                bucketName: "files",
-                metadata: { userId, locationName },
-              };
-              resolve(fileInfo);
-            }
-          });
-        });
-      },
-    });
-    const upload = multer({ storage });
-
-    app.post("/upload/file/:userId/:locationName", upload.single("file"), (req, res) => {
+    app.post("/upload/file/:userEmail/:locationName", upload.single("file"), (req, res) => {
       try {
         res.status(200).json({ message: "File uploaded successfully" });
       } catch (error) {
@@ -90,46 +124,46 @@ AppDataSource.initialize()
       }
     });
 
-    app.get("/file/:type/:userId/:locationName", async (req, res) => {
-      const { type } = req.params;
-      if (type === "floorMap") {
-        try {
-          const { userId, locationName } = req.params;
-          const file = await gfs.files.findOne({ filename: `${userId}/${locationName}/floormap.png` });
-          const readStream = gridfsBucket.openDownloadStream(file._id);
-          readStream.pipe(res);
-        } catch (err) {
-          res.json({ err });
-        }
-      } else {
-        try {
-          const { userId, locationName } = req.params;
-          const file = await gfs.files.findOne({ filename: `${userId}/${locationName}/dataFile.csv` });
+    // app.get("/file/:type/:userId/:locationName", async (req, res) => {
+    //   const { type } = req.params;
+    //   if (type === "floorMap") {
+    //     try {
+    //       const { userId, locationName } = req.params;
+    //       const file = await gfs.files.findOne({ filename: `${userId}/${locationName}/floormap.png` });
+    //       const readStream = gridfsBucket.openDownloadStream(file._id);
+    //       readStream.pipe(res);
+    //     } catch (err) {
+    //       res.json({ err });
+    //     }
+    //   } else {
+    //     try {
+    //       const { userId, locationName } = req.params;
+    //       const file = await gfs.files.findOne({ filename: `${userId}/${locationName}/dataFile.csv` });
 
-          if (!file) {
-            return res.status(404).json({ err: "No file exists" });
-          }
+    //       if (!file) {
+    //         return res.status(404).json({ err: "No file exists" });
+    //       }
 
-          // Set the appropriate content type for CSV
-          res.set("Content-Type", "text/csv");
-          res.set("Content-Disposition", `attachment; filename="${userId}/${locationName}/dataFile.csv"`);
+    //       // Set the appropriate content type for CSV
+    //       res.set("Content-Type", "text/csv");
+    //       res.set("Content-Disposition", `attachment; filename="${userId}/${locationName}/dataFile.csv"`);
 
-          const readStream = gridfsBucket.openDownloadStream(file._id);
-          readStream.pipe(res);
-        } catch (err) {
-          res.status(500).json({ err });
-        }
-      }
-    });
+    //       const readStream = gridfsBucket.openDownloadStream(file._id);
+    //       readStream.pipe(res);
+    //     } catch (err) {
+    //       res.status(500).json({ err });
+    //     }
+    //   }
+    // });
 
-    app.get("/files", async (req, res) => {
-      try {
-        let files = await gfs.files.find().toArray();
-        res.json({ files });
-      } catch (err) {
-        res.json({ err });
-      }
-    });
+    // app.get("/files", async (req, res) => {
+    //   try {
+    //     let files = await gfs.files.find().toArray();
+    //     res.json({ files });
+    //   } catch (err) {
+    //     res.json({ err });
+    //   }
+    // });
 
     const sendUserConfirmationEmail = async (req: Request, res: Response) => {
       const userEmail = req.query.email;

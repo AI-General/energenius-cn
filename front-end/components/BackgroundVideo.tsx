@@ -13,6 +13,10 @@ const BackgroundVideo = ({ cauroselPosition }: { cauroselPosition: number }) => 
   const [isMobile, setIsMobile] = useState(false);
   const [windowWidth, setWindowWidth] = useState(0);
   const [videoContainerPosition, setVideoContainerPosition] = useState(0);
+  const [videoContainerStyes, setVideoContainerStyes] = useState<any>({
+    width: "0vw",
+    height: "auto",
+  });
 
   useEffect(() => {
     setWindowWidth(window.innerWidth);
@@ -24,8 +28,64 @@ const BackgroundVideo = ({ cauroselPosition }: { cauroselPosition: number }) => 
       setWindowWidth(window.innerWidth);
       // @ts-ignore
       setVideoContainerPosition(mainContainerRef.current?.getBoundingClientRect().top + window.scrollY);
-      ScrollTrigger.refresh();
+      // ScrollTrigger.refresh();
+
+      // @ts-ignore
+      const containerTop = mainContainerRef.current.getBoundingClientRect().top;
+      const windowHeight = window.innerHeight;
+      const screenWidth = window.innerWidth;
+
+      let startScroll;
+      let endScroll;
+
+      // If screen width is less than 768px (mobile), adjust start and end points
+      if (screenWidth < 768) {
+        startScroll = windowHeight * 0.75; // Start scroll when it's a quarter from the top
+        endScroll = windowHeight / 2; // Reach full width near the middle
+        if (endScroll === containerTop || endScroll - containerTop < 100) {
+          setVideoContainerStyes({
+            width: "0vw",
+            height: "auto",
+          });
+        }
+      } else {
+        if (windowWidth < 900) {
+          startScroll = windowHeight / 1.4;
+          endScroll = windowHeight;
+        } else {
+          startScroll = windowHeight / 2.5;
+          endScroll = windowHeight;
+        }
+        if (endScroll === containerTop || endScroll - containerTop < 100) {
+          setVideoContainerStyes({
+            width: "0vw",
+            height: "auto",
+          });
+        }
+      }
+      if (containerTop < startScroll && containerTop > -endScroll) {
+        // Calculate the percentage based on how far the container has scrolled into view
+        let scrollPercentage;
+        if (screenWidth < 768) {
+          scrollPercentage = (startScroll - containerTop) / (startScroll - endScroll);
+        } else {
+          scrollPercentage = (startScroll - containerTop) / (endScroll - startScroll);
+        }
+        let newWidth;
+
+        if (screenWidth < 768) {
+          newWidth = Math.min(Math.max(scrollPercentage * 100, 2), 100);
+        } else {
+          newWidth = Math.min(Math.max(scrollPercentage * 95, 2), 95);
+        }
+
+        setVideoContainerStyes({
+          ...videoContainerStyes,
+          width: `${newWidth}vw`,
+        });
+      }
     };
+
     // handleResize();
     window.addEventListener("resize", handleResize);
     window.addEventListener("scroll", handleResize);
@@ -33,7 +93,7 @@ const BackgroundVideo = ({ cauroselPosition }: { cauroselPosition: number }) => 
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("scroll", handleResize);
     };
-  }, []);
+  }, [videoContainerStyes]);
 
   const togglePlayPause = () => {
     if (isPlaying) {
@@ -53,31 +113,35 @@ const BackgroundVideo = ({ cauroselPosition }: { cauroselPosition: number }) => 
     }
   };
 
-  useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger);
-    const element = containerRef.current;
+  // useEffect(() => {
+  //   gsap.registerPlugin(ScrollTrigger);
+  //   const element = containerRef.current;
 
-    gsap.fromTo(
-      element,
-      { width: "0vw", height: "0vh" },
-      {
-        width: window.innerWidth < 768 ? "100vw" : "95%",
-        height: window.innerWidth < 768 ? "230px" : "60vh",
-        // height: "200px",
-        scrollTrigger: {
-          trigger: element,
-          //   pin: true,
-          start: window.innerWidth <= 768 ? "top bottom" : "top bottom",
-          end: window.innerWidth <= 768 ? "bottom 450px" : "top 200px",
-          scrub: 1,
-          //   scrub: true,
-        },
-      }
-    );
-  }, []);
+  //   gsap.fromTo(
+  //     element,
+  //     { width: "0vw", height: "0vh" },
+  //     {
+  //       width: window.innerWidth < 768 ? "100vw" : "95%",
+  //       height: window.innerWidth < 768 ? "230px" : "60vh",
+  //       // height: "200px",
+  //       scrollTrigger: {
+  //         trigger: element,
+  //         //   pin: true,
+  //         start: window.innerWidth <= 768 ? "top bottom" : "top bottom",
+  //         end: window.innerWidth <= 768 ? "bottom 450px" : "top 200px",
+  //         scrub: 1,
+  //         //   scrub: true,
+  //       },
+  //     }
+  //   );
+  // }, []);
 
   return (
-    <section ref={mainContainerRef} className="md:px-[32px] py-1 h-auto px-[0] bg-[#0F0F0F] z-[999999]">
+    <section
+      style={{ ...videoContainerStyes, transition: "width 0.3s ease-in-out" }}
+      ref={mainContainerRef}
+      className="md:px-[32px] py-1 h-auto px-[0] bg-[#0F0F0F] z-[999999] mx-auto"
+    >
       <div
         ref={containerRef}
         style={{

@@ -29,20 +29,22 @@ const UploadBuildingData = ({ onClick, currentActiveBuilding }: { onClick: any; 
   const token = window.localStorage.getItem("token");
   const buildingsLocalStorage: any = window.localStorage.getItem("buildingsData");
   const buildings = JSON.parse(buildingsLocalStorage);
-  // const downloadFloorMapUrlBase = `${supabaseUrl}/storage/v1/object/public/floorPlan/${
+  // const downloadFloorMapUrlBase = `${process.env.NEXT_PUBLIC_API_ROUTE_V2}/file/floorMap/${
   //   user.id
-  // }/${currentActiveBuilding.properties.name.split(" ").join("-")}/FloorMap/floorMap`;
-  const downloadFloorMapUrlBase = `${process.env.NEXT_PUBLIC_API_ROUTE_V2}/file/floorMap/${
-    user.id
-  }/${currentActiveBuilding.properties.name.split(" ").join("-")}`;
-  const downloadBuildingDataUrlBase = `${process.env.NEXT_PUBLIC_API_ROUTE_V2}/file/floorMap/${
-    user.id
-  }/${currentActiveBuilding.properties.name.split(" ").join("-")}`;
-  // const downloadBuildingDataUrlBase = `${supabaseUrl}/storage/v1/object/public/buildingData/${
+  // }/${currentActiveBuilding.properties.name.split(" ").join("-")}`;
+  const downloadFloorMapUrlBase = `https://${process.env.NEXT_PUBLIC_BUCKET_NAME}.s3.${
+    process.env.NEXT_PUBLIC_REGION
+  }.amazonaws.com/${user.email}/${currentActiveBuilding.properties.name.split(" ").join("-")}/floorMap.png`;
+  const downloadBuildingDataUrlBase = `https://${process.env.NEXT_PUBLIC_BUCKET_NAME}.s3.${
+    process.env.NEXT_PUBLIC_REGION
+  }.amazonaws.com/${user.email}/${currentActiveBuilding.properties.name.split(" ").join("-")}/csvData.csv`;
+  // const downloadBuildingDataUrlBase = `${process.env.NEXT_PUBLIC_API_ROUTE_V2}/file/floorMap/${
   //   user.id
-  // }/buildings/${currentActiveBuilding.properties.name.split(" ").join("-")}/buildingData`;
+  // }/${currentActiveBuilding.properties.name.split(" ").join("-")}`;
 
   useEffect(() => {
+    console.log("downloadFloorMapUrlBase", downloadFloorMapUrlBase);
+    console.log("downloadBuildingDataUrlBase", downloadBuildingDataUrlBase);
     if (currentActiveBuilding) {
       buildings.map((item: any) => {
         if (item.name === currentActiveBuilding.properties.name) {
@@ -79,12 +81,12 @@ const UploadBuildingData = ({ onClick, currentActiveBuilding }: { onClick: any; 
   }, [uploadedBuildingData, uploadedFloorMap]);
 
   async function uploadFloorPlan(file: any) {
+    setuploadingFloorMap(true);
     const formdata = new FormData();
     formdata.append("file", file);
-    setuploadingFloorMap(true);
     try {
       const { data, status } = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_ROUTE_V2}/upload/file/${user.id}/${currentActiveBuilding.properties.name
+        `${process.env.NEXT_PUBLIC_API_ROUTE_V2}/upload/file/${user.email}/${currentActiveBuilding.properties.name
           .split(" ")
           .join("-")}`,
         formdata,
@@ -99,7 +101,7 @@ const UploadBuildingData = ({ onClick, currentActiveBuilding }: { onClick: any; 
       if (status === 200) {
         await axios
           .put(
-            `${process.env.NEXT_PUBLIC_API_ROUTE_V2}/users/${user.id}/locations/${currentBuildingObj.id}`,
+            `${process.env.NEXT_PUBLIC_API_ROUTE_V2}/users/${user.email}/locations/${currentBuildingObj.id}`,
             JSON.stringify({
               floorMap: downloadFloorMapUrlBase,
             }),

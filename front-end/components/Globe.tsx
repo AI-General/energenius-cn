@@ -88,7 +88,7 @@ const WorldGlobe: FC<Props> = ({
           // const buildings = buildingsLocalStorage ? JSON.parse(buildingsLocalStorage) : [];
           // const allLocationsLocalStorage = localStorage.getItem("locations");
           // const parsedLocations = allLocationsLocalStorage ? JSON.parse(allLocationsLocalStorage) : [];
-          if (Array.isArray(buildings) || Array.isArray(parsedLocations)) {
+          if (Array.isArray(buildings) && Array.isArray(parsedLocations)) {
             const newArr = [
               ...buildings?.map((item: any, _i: number) => ({
                 lat: item.location[0],
@@ -118,7 +118,7 @@ const WorldGlobe: FC<Props> = ({
             ];
             const filteredNulls = newArr.filter((item) => item !== null);
             const filteredDifference = filteredNulls.filter(
-              (item) =>
+              (item: any) =>
                 Math.abs(item.lat - currentActiveBuilding.lat) >= 1 ||
                 Math.abs(item.lng - currentActiveBuilding.lng) === 0
             );
@@ -135,7 +135,7 @@ const WorldGlobe: FC<Props> = ({
           // const buildings = buildingsLocalStorage ? JSON.parse(buildingsLocalStorage) : [];
           // const allLocationsLocalStorage = localStorage.getItem("locations");
           // const parsedLocations = allLocationsLocalStorage ? JSON.parse(allLocationsLocalStorage) : [];
-          if (Array.isArray(buildings) || Array.isArray(parsedLocations)) {
+          if (Array.isArray(buildings) && Array.isArray(parsedLocations)) {
             const newArr = [
               ...buildings?.map((item: any, _i: number) => ({
                 lat: item.location[0],
@@ -209,7 +209,7 @@ const WorldGlobe: FC<Props> = ({
   useEffect(() => {
     const centecoords = [-99, 38];
     if (centerCoordinates.every((coord, index) => coord === centecoords[index])) {
-      if (Array.isArray(buildings) || Array.isArray(parsedLocations)) {
+      if (Array.isArray(buildings) && Array.isArray(parsedLocations)) {
         if (buildings) {
           const newArr = [
             ...buildings?.map((item: any, _i: number) => ({

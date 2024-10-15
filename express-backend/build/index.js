@@ -48,13 +48,15 @@ var path = require("path");
 var crypto = require("crypto");
 var mongoose = require("mongoose");
 var multer = require("multer");
-var GridFsStorage = require("multer-gridfs-storage").GridFsStorage;
-var Grid = require("gridfs-stream");
+var multerS3 = require("multer-s3");
+var aws = require("aws-sdk");
+// const { GridFsStorage } = require("multer-gridfs-storage");
+// const Grid = require("gridfs-stream");
 var methodOverride = require("method-override");
 var mongoURI = process.env.MONGODB_URI;
 data_source_1.AppDataSource.initialize()
     .then(function () { return __awaiter(void 0, void 0, void 0, function () {
-    var app, PORT, conn, gfs, gridfsBucket, storage, upload, sendUserConfirmationEmail;
+    var app, PORT, conn, s3, BUCKET_NAME, upload, sendUserConfirmationEmail;
     return __generator(this, function (_a) {
         app = express();
         PORT = 5001;
@@ -74,46 +76,45 @@ data_source_1.AppDataSource.initialize()
         app.use(locations_routes_1.default);
         app.get("/health-check", function (req, res) { return res.send("OK"); });
         conn = mongoose.createConnection(mongoURI);
-        conn.once("open", function () {
-            gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
-                bucketName: "files",
-            });
-            gfs = Grid(conn.db, mongoose.mongo);
-            gfs.collection("files");
+        // let gfs: any, gridfsBucket: any;
+        // conn.once("open", () => {
+        //   gridfsBucket = new mongoose.mongo.GridFSBucket(conn.db, {
+        //     bucketName: "files",
+        //   });
+        //   gfs = Grid(conn.db, mongoose.mongo);
+        //   gfs.collection("files");
+        // });
+        aws.config.update({
+            accessKeyId: process.env.AWS_ACCESS_KEY,
+            secretAccessKey: process.env.AWS_ACCESS_SECRET,
+            region: process.env.REGION_NAME,
         });
-        storage = new GridFsStorage({
-            url: mongoURI,
-            file: function (req, file) {
-                var _a = req.params, userId = _a.userId, locationName = _a.locationName;
-                return new Promise(function (resolve, reject) {
-                    crypto.randomBytes(16, function (err, buf) {
-                        if (err) {
-                            return reject(err);
-                        }
-                        if (file.mimetype.split("/")[0] === "image") {
-                            var filename = "".concat(userId, "/").concat(locationName, "/floormap.png");
-                            var fileInfo = {
-                                filename: filename,
-                                bucketName: "files",
-                                metadata: { userId: userId, locationName: locationName },
-                            };
-                            resolve(fileInfo);
-                        }
-                        else {
-                            var filename = "".concat(userId, "/").concat(locationName, "/dataFile.csv");
-                            var fileInfo = {
-                                filename: filename,
-                                bucketName: "files",
-                                metadata: { userId: userId, locationName: locationName },
-                            };
-                            resolve(fileInfo);
-                        }
-                    });
-                });
-            },
+        s3 = new aws.S3();
+        BUCKET_NAME = process.env.AWS_BUCKET_NAME;
+        upload = multer({
+            storage: multerS3({
+                s3: s3,
+                bucket: BUCKET_NAME,
+                contentType: multerS3.AUTO_CONTENT_TYPE,
+                key: function (req, file, cb) {
+                    console.log("request", req.params);
+                    console.log("Uploading file:", file.originalname);
+                    if (file.mimetype.split("/")[0] === "image") {
+                        var userEmail = req.params.userEmail;
+                        var locationName = req.params.locationName;
+                        var filePath = "".concat(userEmail, "/").concat(locationName, "/floormap.png");
+                        cb(null, filePath);
+                    }
+                    else {
+                        var userEmail = req.params.userEmail;
+                        var locationName = req.params.locationName;
+                        var filePath = "".concat(userEmail, "/").concat(locationName, "/dataFile.csv");
+                        cb(null, filePath);
+                    }
+                },
+            }),
         });
-        upload = multer({ storage: storage });
-        app.post("/upload/file/:userId/:locationName", upload.single("file"), function (req, res) {
+        app.post("/upload/file/:userEmail/:locationName", upload.single("file"), function (req, res) {
             try {
                 res.status(200).json({ message: "File uploaded successfully" });
             }
@@ -121,70 +122,6 @@ data_source_1.AppDataSource.initialize()
                 res.status(500).json({ message: "Internal server error" });
             }
         });
-        app.get("/file/:type/:userId/:locationName", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-            var type, _a, userId, locationName, file, readStream, err_1, _b, userId, locationName, file, readStream, err_2;
-            return __generator(this, function (_c) {
-                switch (_c.label) {
-                    case 0:
-                        type = req.params.type;
-                        if (!(type === "floorMap")) return [3 /*break*/, 5];
-                        _c.label = 1;
-                    case 1:
-                        _c.trys.push([1, 3, , 4]);
-                        _a = req.params, userId = _a.userId, locationName = _a.locationName;
-                        return [4 /*yield*/, gfs.files.findOne({ filename: "".concat(userId, "/").concat(locationName, "/floormap.png") })];
-                    case 2:
-                        file = _c.sent();
-                        readStream = gridfsBucket.openDownloadStream(file._id);
-                        readStream.pipe(res);
-                        return [3 /*break*/, 4];
-                    case 3:
-                        err_1 = _c.sent();
-                        res.json({ err: err_1 });
-                        return [3 /*break*/, 4];
-                    case 4: return [3 /*break*/, 8];
-                    case 5:
-                        _c.trys.push([5, 7, , 8]);
-                        _b = req.params, userId = _b.userId, locationName = _b.locationName;
-                        return [4 /*yield*/, gfs.files.findOne({ filename: "".concat(userId, "/").concat(locationName, "/dataFile.csv") })];
-                    case 6:
-                        file = _c.sent();
-                        if (!file) {
-                            return [2 /*return*/, res.status(404).json({ err: "No file exists" })];
-                        }
-                        // Set the appropriate content type for CSV
-                        res.set("Content-Type", "text/csv");
-                        res.set("Content-Disposition", "attachment; filename=\"".concat(userId, "/").concat(locationName, "/dataFile.csv\""));
-                        readStream = gridfsBucket.openDownloadStream(file._id);
-                        readStream.pipe(res);
-                        return [3 /*break*/, 8];
-                    case 7:
-                        err_2 = _c.sent();
-                        res.status(500).json({ err: err_2 });
-                        return [3 /*break*/, 8];
-                    case 8: return [2 /*return*/];
-                }
-            });
-        }); });
-        app.get("/files", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-            var files, err_3;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        _a.trys.push([0, 2, , 3]);
-                        return [4 /*yield*/, gfs.files.find().toArray()];
-                    case 1:
-                        files = _a.sent();
-                        res.json({ files: files });
-                        return [3 /*break*/, 3];
-                    case 2:
-                        err_3 = _a.sent();
-                        res.json({ err: err_3 });
-                        return [3 /*break*/, 3];
-                    case 3: return [2 /*return*/];
-                }
-            });
-        }); });
         sendUserConfirmationEmail = function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
             var userEmail, transporter, mailOptions;
             return __generator(this, function (_a) {
