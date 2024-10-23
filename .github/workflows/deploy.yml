@@ -1,0 +1,46 @@
+name: Deployment CI
+
+on:
+  push:
+    branches: ["master"]
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      # build and deploy frontend app
+      - name: Deploying frontend
+        working-directory: front-end
+        run: |
+          npm i --force
+          npm run build
+          pm2 restart frontend
+
+      # Install Python dependencies
+      - name: Installing Python dependencies
+        working-directory: back-end
+        run: |
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      # Build Python app
+      - name: Deploying Python backend
+        working-directory: back-end
+        run: pm2 restart python-be
+
+      # Install Node.js dependencies
+      - name: Installing Node.js dependencies
+        working-directory: express-backend
+        run: npm ci
+
+      # Build Node.js app
+      - name: Building Node.js backend
+        working-directory: express-backend
+        run: npm run build
+
+      - name: Deploying Node.js backend
+        working-directory: express-backend
+        run: sudo pm2 restart express-be

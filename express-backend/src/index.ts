@@ -37,7 +37,7 @@ AppDataSource.initialize()
     app.use(authRouter);
     app.use(buildingsRouter);
     app.use(locationsRouter);
-    app.get("/health-check", (req: Request, res: Response) => res.send("OK"));
+    app.get("/health-check", (req: Request, res: Response) => res.send("OK -- CICD TEST 2 EXPRESS BE"));
 
     const conn = mongoose.createConnection(mongoURI);
 

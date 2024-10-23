@@ -107,7 +107,7 @@ def dfInterpolate(df):
 
 @app.get("/health", response_class=PlainTextResponse)
 async def health_check():
-    return "OK"
+    return "OK -- CICD 2 TEST PYTHON BE"
 
 @app.get("/getValues")
 def read_get_values(datetime_str: str = Query(..., alias='datetime'), period: int = Query(1)):
