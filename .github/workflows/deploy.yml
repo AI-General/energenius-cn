@@ -32,6 +32,12 @@ jobs:
         working-directory: express-backend
         run: npm run build
 
+      - name: Adding Environment Variables
+        working-directory: express-backend
+        run: |
+          touch .env.local
+          echo "${{ scecrets.PROD_ENV }}" > .env.local
+
       - name: Deploying Node.js backend
         working-directory: express-backend
         run: sudo pm2 restart express-be
