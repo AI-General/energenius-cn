@@ -36,7 +36,7 @@ jobs:
         working-directory: express-backend
         run: |
           touch .env.local
-          echo "${{ scecrets.PROD_ENV }}" > .env.local
+          echo "${{ secrets.PROD_ENV }}" > .env.local
 
       - name: Deploying Node.js backend
         working-directory: express-backend
