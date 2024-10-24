@@ -25,12 +25,12 @@ jobs:
       # Install Node.js dependencies
       - name: Installing Node.js dependencies
         working-directory: express-backend
-        run: npm ci
+        run: cnpm ci
 
       # Build Node.js app
       - name: Building Node.js backend
         working-directory: express-backend
-        run: npm run build
+        run: cnpm run build
 
       - name: Adding Environment Variables
         working-directory: express-backend
